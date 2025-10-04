@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Install dependencies
+      run: uv sync --dev
+
+    - name: Run tests
+      run: |
+        uv run pytest
+        uv run ruff check .
+        uv run mypy src/
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Build package
+      run: |
+        uv build
+
+    - name: Store build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+  build-binaries:
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact-name: tskr-linux
+          - os: windows-latest
+            artifact-name: tskr-windows.exe
+          - os: macos-latest
+            artifact-name: tskr-macos
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Build binary with PyInstaller
+      run: |
+        uv run pyinstaller --onefile --name ${{ matrix.artifact-name }} main.py
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact-name }}
+        path: dist/${{ matrix.artifact-name }}*
+
+  publish:
+    needs: [build, build-binaries]
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+    - name: Download Linux binary
+      uses: actions/download-artifact@v4
+      with:
+        name: tskr-linux
+        path: binaries/
+
+    - name: Download Windows binary
+      uses: actions/download-artifact@v4
+      with:
+        name: tskr-windows.exe
+        path: binaries/
+
+    - name: Download macOS binary
+      uses: actions/download-artifact@v4
+      with:
+        name: tskr-macos
+        path: binaries/
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*
+          binaries/*
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}

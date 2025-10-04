@@ -1,0 +1,13 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+All of the tasks to do are stored using tskr.
+tskr is a task management tool that allows you to create, assign, and track tasks.
+To access the tasks, you can use the command `tskr ls` in your terminal.
+To add a task, you can use the command `tskr add <description>`.
+To make a task as done, you can use the command `tskr done <task-id>`.
+
+When starting a request from the user, check first if there are tasks associated with the request. If none, create tasks to achieve the request. Every few steps, check back on the tasks and update them accordingly.
