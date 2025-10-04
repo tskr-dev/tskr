@@ -4,10 +4,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from typer.testing import CliRunner
-
 from tskr.cli import app
 from tskr.models import Priority, Project, Status, Task
+from typer.testing import CliRunner
 
 
 class TestAddCommand:
