@@ -63,10 +63,13 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact-name: tskr-linux
+            archive-ext: tar.gz
           - os: windows-latest
-            artifact-name: tskr-windows.exe
+            artifact-name: tskr-windows
+            archive-ext: zip
           - os: macos-latest
             artifact-name: tskr-macos
+            archive-ext: tar.gz
 
     steps:
     - uses: actions/checkout@v4
@@ -85,13 +88,25 @@ jobs:
 
     - name: Build binary with PyInstaller
       run: |
-        uv run pyinstaller --onedir --name ${{ matrix.artifact-name }} main.py
+        uv run pyinstaller --onedir --name tskr main.py
 
-    - name: Upload binary
+    - name: Create archive (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cd dist
+        tar -czf ${{ matrix.artifact-name }}.tar.gz tskr/
+        
+    - name: Create archive (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cd dist
+        Compress-Archive -Path tskr -DestinationPath ${{ matrix.artifact-name }}.zip
+
+    - name: Upload binary archive
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact-name }}
-        path: dist/${{ matrix.artifact-name }}*
+        path: dist/${{ matrix.artifact-name }}.${{ matrix.archive-ext }}
 
   publish:
     needs: [build, build-binaries]
@@ -116,7 +131,7 @@ jobs:
     - name: Download Windows binary
       uses: actions/download-artifact@v4
       with:
-        name: tskr-windows.exe
+        name: tskr-windows
         path: binaries/
 
     - name: Download macOS binary
