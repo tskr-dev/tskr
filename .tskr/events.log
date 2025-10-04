@@ -1,2 +1,0 @@
-{"ts": "2025-10-04T18:35:52.779734", "event": "project_created", "task_id": "", "actor": "system", "details": {"name": "tskr", "project_id": "tskr"}}
-{"ts": "2025-10-04T18:36:04.097644", "event": "task_created", "task_id": "ae5a97d1-cebc-4d32-b2a8-a88a2613a1a9", "actor": "unknown", "details": {"title": "first task", "priority": ""}}
