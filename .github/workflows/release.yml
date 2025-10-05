@@ -140,6 +140,13 @@ jobs:
         name: tskr-macos
         path: binaries/
 
+    - name: Generate checksums
+      run: |
+        cd binaries
+        sha256sum tskr-linux.tar.gz > tskr-linux.tar.gz.sha256
+        sha256sum tskr-windows.zip > tskr-windows.zip.sha256
+        sha256sum tskr-macos.tar.gz > tskr-macos.tar.gz.sha256
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
@@ -149,3 +156,38 @@ jobs:
         generate_release_notes: true
         draft: false
         prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+
+  update-homebrew:
+    needs: publish
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref, 'alpha') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc')"
+    
+    steps:
+    - name: Extract version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Download macOS binary
+      uses: actions/download-artifact@v4
+      with:
+        name: tskr-macos
+        path: binaries/
+
+    - name: Calculate SHA256
+      id: sha
+      run: |
+        SHA=$(sha256sum binaries/tskr-macos.tar.gz | awk '{print $1}')
+        echo "SHA256=$SHA" >> $GITHUB_OUTPUT
+
+    - name: Update Homebrew tap
+      uses: mislav/bump-homebrew-formula-action@v3
+      with:
+        formula-name: tskr
+        homebrew-tap: tskr-dev/homebrew-tskr
+        download-url: https://github.com/tskr-dev/tskr/releases/download/v${{ steps.version.outputs.VERSION }}/tskr-macos.tar.gz
+        commit-message: |
+          tskr ${{ steps.version.outputs.VERSION }}
+          
+          Automated update via GitHub Actions
+      env:
+        COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
