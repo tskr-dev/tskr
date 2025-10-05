@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 from tskr.formatters import TaskFormatter, get_formatter, get_prompts
-from tskr.models import DashboardStats, Priority, ProjectStats, Status, Task
+from tskr.models import Task, TaskPriority, TaskStatus
 
 
 class TestTaskFormatter:
@@ -25,8 +25,8 @@ class TestTaskFormatter:
         """Test formatting basic task table."""
         formatter = TaskFormatter()
         tasks = [
-            Task(title="Task 1", status=Status.BACKLOG),
-            Task(title="Task 2", status=Status.PENDING),
+            Task(title="Task 1", status=TaskStatus.BACKLOG),
+            Task(title="Task 2", status=TaskStatus.PENDING),
         ]
 
         table = formatter.format_task_table(tasks)
@@ -41,7 +41,7 @@ class TestTaskFormatter:
         tasks = [
             Task(
                 title="Task 1",
-                status=Status.BACKLOG,
+                status=TaskStatus.BACKLOG,
                 due=datetime.now() + timedelta(days=1),
                 tags=["urgent", "bug"],
                 project="test-project",
@@ -78,8 +78,8 @@ class TestTaskFormatter:
         task = Task(
             title="Test Task",
             description="Test description",
-            status=Status.BACKLOG,
-            priority=Priority.HIGH,
+            status=TaskStatus.BACKLOG,
+            priority=TaskPriority.HIGH,
             due=datetime.now() + timedelta(days=1),
             tags=["urgent", "bug"],
         )
@@ -95,59 +95,6 @@ class TestTaskFormatter:
             console.print(panel)
         output = capture.get()
         assert "Test description" in output
-
-    def test_format_dashboard(self) -> None:
-        """Test formatting dashboard statistics."""
-        formatter = TaskFormatter()
-        stats = DashboardStats(
-            total_backlog=5,
-            total_pending=3,
-            total_completed=10,
-            total_overdue=2,
-            due_today=1,
-            due_this_week=4,
-            claimed_tasks=2,
-            active_projects=1,
-        )
-
-        panel = formatter.format_dashboard(stats)
-
-        assert panel is not None
-        # Check that panel has the expected content by rendering it
-        from rich.console import Console
-
-        console = Console()
-        with console.capture() as capture:
-            console.print(panel)
-        output = capture.get()
-        assert "Dashboard" in output
-
-    def test_format_project_stats(self) -> None:
-        """Test formatting project statistics."""
-        formatter = TaskFormatter()
-        stats = [
-            ProjectStats(
-                name="Test Project",
-                backlog_count=5,
-                pending_count=3,
-                completed_count=10,
-                overdue_count=2,
-                claimed_count=2,
-                total_count=15,
-            )
-        ]
-
-        table = formatter.format_project_stats(stats)
-
-        assert table is not None
-        # Check that table has the expected content by rendering it
-        from rich.console import Console
-
-        console = Console()
-        with console.capture() as capture:
-            console.print(table)
-        output = capture.get()
-        assert "Test Project" in output
 
     def test_print_success(self) -> None:
         """Test printing success message."""

@@ -4,9 +4,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from tskr.cli import app
-from tskr.models import Priority, Project, Status, Task
 from typer.testing import CliRunner
+
+from tskr.cli import app
+from tskr.models import Project, Task, TaskPriority, TaskStatus
 
 
 class TestAddCommand:
@@ -18,7 +19,7 @@ class TestAddCommand:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            mock_task = Task(title="Test Task", status=Status.BACKLOG)
+            mock_task = Task(title="Test Task", status=TaskStatus.BACKLOG)
             mock_service.create_task.return_value = mock_task
 
             result = cli_runner.invoke(app, ["add", "Test Task"])
@@ -32,7 +33,7 @@ class TestAddCommand:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            mock_task = Task(title="Test Task", status=Status.BACKLOG)
+            mock_task = Task(title="Test Task", status=TaskStatus.BACKLOG)
             mock_service.create_task.return_value = mock_task
 
             result = cli_runner.invoke(
@@ -73,7 +74,7 @@ class TestAddCommand:
             mock_service_class.return_value = mock_service
             mock_parse.return_value = datetime.now() + timedelta(days=1)
 
-            mock_task = Task(title="Test Task", status=Status.BACKLOG)
+            mock_task = Task(title="Test Task", status=TaskStatus.BACKLOG)
             mock_service.create_task.return_value = mock_task
 
             result = cli_runner.invoke(app, ["add", "Test Task", "--due", "tomorrow"])
@@ -88,7 +89,7 @@ class TestAddCommand:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            mock_task = Task(title="Test Task", status=Status.BACKLOG)
+            mock_task = Task(title="Test Task", status=TaskStatus.BACKLOG)
             mock_service.create_task.return_value = mock_task
 
             result = cli_runner.invoke(app, ["add", "Test Task", "--bug"])
@@ -170,8 +171,8 @@ class TestLsCommand:
             mock_service_class.return_value = mock_service
 
             mock_tasks = [
-                Task(title="Task 1", status=Status.BACKLOG),
-                Task(title="Task 2", status=Status.PENDING),
+                Task(title="Task 1", status=TaskStatus.BACKLOG),
+                Task(title="Task 2", status=TaskStatus.PENDING),
             ]
             mock_service.list_tasks.return_value = mock_tasks
 
@@ -186,7 +187,7 @@ class TestLsCommand:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            mock_tasks = [Task(title="Task 1", status=Status.BACKLOG)]
+            mock_tasks = [Task(title="Task 1", status=TaskStatus.BACKLOG)]
             mock_service.list_tasks.return_value = mock_tasks
 
             result = cli_runner.invoke(app, ["ls", "backlog"])
@@ -200,7 +201,7 @@ class TestLsCommand:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            mock_tasks = [Task(title="Task 1", priority=Priority.HIGH)]
+            mock_tasks = [Task(title="Task 1", priority=TaskPriority.HIGH)]
             mock_service.list_tasks.return_value = mock_tasks
 
             result = cli_runner.invoke(app, ["ls", "--priority", "H"])
@@ -228,7 +229,7 @@ class TestLsCommand:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            mock_tasks = [Task(title="Task 1", status=Status.BACKLOG)]
+            mock_tasks = [Task(title="Task 1", status=TaskStatus.BACKLOG)]
             mock_service.list_tasks.return_value = mock_tasks
 
             result = cli_runner.invoke(app, ["ls", "--unclaimed"])
@@ -242,7 +243,7 @@ class TestLsCommand:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
-            mock_tasks = [Task(title="Task 1", status=Status.BACKLOG)]
+            mock_tasks = [Task(title="Task 1", status=TaskStatus.BACKLOG)]
             mock_service.list_tasks.return_value = mock_tasks
 
             result = cli_runner.invoke(app, ["ls", "--limit", "5"])

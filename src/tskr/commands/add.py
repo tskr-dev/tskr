@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 import typer
 
 from ..formatters import get_formatter
-from ..models import Priority
+from ..models import TaskPriority
 from ..services import TaskService
 from ..utils import parse_natural_date
 
@@ -37,7 +37,7 @@ def add_command(
         Optional[str], typer.Option("--by", help="Who created this task")
     ] = None,
 ) -> None:
-    """Add a new task to the backlog."""
+    """Add a new task to the backlog with the following options"""
     formatter = get_formatter()
 
     try:
@@ -83,13 +83,13 @@ def add_command(
             raise typer.Exit(1) from None
 
     # Parse priority
-    task_priority = Priority.NONE
+    task_priority = TaskPriority.NONE
     if priority:
         priority_upper = priority.upper()
         if priority_upper not in ["H", "M", "L"]:
             formatter.print_error("Priority must be H, M, or L")
             raise typer.Exit(1) from None
-        task_priority = Priority(priority_upper)
+        task_priority = TaskPriority(priority_upper)
 
     # Create task
     task = service.create_task(
@@ -105,9 +105,9 @@ def add_command(
     task_info = [f"'{task.title}'"]
     if parsed_due:
         task_info.append(f"due:{parsed_due.strftime('%Y-%m-%d')}")
-    if task_priority != Priority.NONE:
+    if task_priority != TaskPriority.NONE:
         task_info.append(f"priority:{task_priority.value}")
     if unique_tags:
         task_info.append(f"tags:{','.join(unique_tags)}")
 
-    formatter.print_success(f"✅ Added task {task.short_id}: {' '.join(task_info)}")
+    formatter.print_success(f"Added task {task.short_id}: {' '.join(task_info)}")

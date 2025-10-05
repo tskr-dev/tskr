@@ -6,7 +6,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from tskr.models import Event, Priority, Status, Task, TaskFilter
+
+from tskr.models import Event, Task, TaskFilter, TaskPriority, TaskStatus
 from tskr.storage import EventLog, TaskStore
 
 
@@ -42,17 +43,17 @@ class TestTaskStore:
         """Test getting status directory."""
         store = TaskStore(project_root=temp_dir)
 
-        assert store._get_status_dir(Status.BACKLOG) == store.backlog_dir
-        assert store._get_status_dir(Status.PENDING) == store.pending_dir
-        assert store._get_status_dir(Status.COMPLETED) == store.completed_dir
-        assert store._get_status_dir(Status.ARCHIVED) == store.archived_dir
+        assert store._get_status_dir(TaskStatus.BACKLOG) == store.backlog_dir
+        assert store._get_status_dir(TaskStatus.PENDING) == store.pending_dir
+        assert store._get_status_dir(TaskStatus.COMPLETED) == store.completed_dir
+        assert store._get_status_dir(TaskStatus.ARCHIVED) == store.archived_dir
 
     def test_get_task_path(self, temp_dir: Path) -> None:
         """Test getting task file path."""
         store = TaskStore(project_root=temp_dir)
 
         task_id = "test-task-id"
-        path = store._get_task_path(task_id, Status.BACKLOG)
+        path = store._get_task_path(task_id, TaskStatus.BACKLOG)
         expected = store.backlog_dir / f"{task_id}.json"
         assert path == expected
 
@@ -69,7 +70,7 @@ class TestTaskStore:
         assert result is not None
         file_path, status = result
         assert file_path == task_file
-        assert status == Status.BACKLOG
+        assert status == TaskStatus.BACKLOG
 
     def test_find_task_file_prefix_match(self, temp_dir: Path) -> None:
         """Test finding task file with prefix match."""
@@ -84,7 +85,7 @@ class TestTaskStore:
         assert result is not None
         file_path, status = result
         assert file_path == task_file
-        assert status == Status.BACKLOG
+        assert status == TaskStatus.BACKLOG
 
     def test_find_task_file_not_found(self, temp_dir: Path) -> None:
         """Test finding task file that doesn't exist."""
@@ -114,8 +115,8 @@ class TestTaskStore:
         assert task is not None
         assert task.id == "test-task-id"
         assert task.title == "Test Task"
-        assert task.status == Status.BACKLOG
-        assert task.priority == Priority.HIGH
+        assert task.status == TaskStatus.BACKLOG
+        assert task.priority == TaskPriority.HIGH
 
     def test_load_task_from_file_invalid_json(self, temp_dir: Path) -> None:
         """Test loading task from invalid JSON file."""
@@ -132,7 +133,7 @@ class TestTaskStore:
         """Test saving task to file."""
         store = TaskStore(project_root=temp_dir)
 
-        task = Task(title="Test Task", status=Status.BACKLOG)
+        task = Task(title="Test Task", status=TaskStatus.BACKLOG)
         task_file = store.backlog_dir / f"{task.id}.json"
 
         store._save_task_to_file(task, task_file)
@@ -147,7 +148,7 @@ class TestTaskStore:
         """Test that task saving is atomic."""
         store = TaskStore(project_root=temp_dir)
 
-        task = Task(title="Test Task", status=Status.BACKLOG)
+        task = Task(title="Test Task", status=TaskStatus.BACKLOG)
         task_file = store.backlog_dir / f"{task.id}.json"
 
         # Mock the file operations to test atomic behavior
@@ -189,7 +190,7 @@ class TestTaskStore:
         """Test saving a new task."""
         store = TaskStore(project_root=temp_dir)
 
-        task = Task(title="Test Task", status=Status.BACKLOG)
+        task = Task(title="Test Task", status=TaskStatus.BACKLOG)
         saved_task = store.save(task)
 
         assert saved_task == task
@@ -201,16 +202,16 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create initial task
-        task = Task(title="Test Task", status=Status.BACKLOG)
+        task = Task(title="Test Task", status=TaskStatus.BACKLOG)
         store.save(task)
 
         # Modify and save again
         task.title = "Updated Task"
-        task.status = Status.PENDING
+        task.status = TaskStatus.PENDING
         saved_task = store.save(task)
 
         assert saved_task.title == "Updated Task"
-        assert saved_task.status == Status.PENDING
+        assert saved_task.status == TaskStatus.PENDING
 
         # Check that file moved to pending directory
         pending_file = store.pending_dir / f"{task.id}.json"
@@ -223,7 +224,7 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create a task
-        task = Task(title="Test Task", status=Status.BACKLOG)
+        task = Task(title="Test Task", status=TaskStatus.BACKLOG)
         store.save(task)
 
         # Delete permanently
@@ -239,7 +240,7 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create a task
-        task = Task(title="Test Task", status=Status.BACKLOG)
+        task = Task(title="Test Task", status=TaskStatus.BACKLOG)
         store.save(task)
 
         # Archive (soft delete)
@@ -255,7 +256,7 @@ class TestTaskStore:
         # Check that task status is archived
         archived_task = store.get(task.id)
         assert archived_task is not None
-        assert archived_task.status == Status.ARCHIVED
+        assert archived_task.status == TaskStatus.ARCHIVED
 
     def test_delete_task_not_found(self, temp_dir: Path) -> None:
         """Test deleting a task that doesn't exist."""
@@ -269,9 +270,9 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create tasks in different statuses
-        backlog_task = Task(title="Backlog Task", status=Status.BACKLOG)
-        pending_task = Task(title="Pending Task", status=Status.PENDING)
-        completed_task = Task(title="Completed Task", status=Status.COMPLETED)
+        backlog_task = Task(title="Backlog Task", status=TaskStatus.BACKLOG)
+        pending_task = Task(title="Pending Task", status=TaskStatus.PENDING)
+        completed_task = Task(title="Completed Task", status=TaskStatus.COMPLETED)
 
         store.save(backlog_task)
         store.save(pending_task)
@@ -289,14 +290,14 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create tasks in different statuses
-        backlog_task = Task(title="Backlog Task", status=Status.BACKLOG)
-        pending_task = Task(title="Pending Task", status=Status.PENDING)
+        backlog_task = Task(title="Backlog Task", status=TaskStatus.BACKLOG)
+        pending_task = Task(title="Pending Task", status=TaskStatus.PENDING)
 
         store.save(backlog_task)
         store.save(pending_task)
 
         # Filter by status
-        backlog_tasks = store.list_all(status=Status.BACKLOG)
+        backlog_tasks = store.list_all(status=TaskStatus.BACKLOG)
         assert len(backlog_tasks) == 1
         assert backlog_tasks[0].title == "Backlog Task"
 
@@ -306,15 +307,17 @@ class TestTaskStore:
 
         # Create tasks with different priorities
         high_task = Task(
-            title="High Task", priority=Priority.HIGH, status=Status.BACKLOG
+            title="High Task", priority=TaskPriority.HIGH, status=TaskStatus.BACKLOG
         )
-        low_task = Task(title="Low Task", priority=Priority.LOW, status=Status.BACKLOG)
+        low_task = Task(
+            title="Low Task", priority=TaskPriority.LOW, status=TaskStatus.BACKLOG
+        )
 
         store.save(high_task)
         store.save(low_task)
 
         # Filter by priority
-        filter_obj = TaskFilter(priority=Priority.HIGH)
+        filter_obj = TaskFilter(priority=TaskPriority.HIGH)
         tasks = store.list_filtered(filter_obj)
         assert len(tasks) == 1
         assert tasks[0].title == "High Task"
@@ -324,8 +327,8 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create tasks with different tags
-        task1 = Task(title="Task 1", tags=["bug", "urgent"], status=Status.BACKLOG)
-        task2 = Task(title="Task 2", tags=["feature"], status=Status.BACKLOG)
+        task1 = Task(title="Task 1", tags=["bug", "urgent"], status=TaskStatus.BACKLOG)
+        task2 = Task(title="Task 2", tags=["feature"], status=TaskStatus.BACKLOG)
 
         store.save(task1)
         store.save(task2)
@@ -341,9 +344,11 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create tasks with different content
-        task1 = Task(title="Bug Fix", description="Fix the bug", status=Status.BACKLOG)
+        task1 = Task(
+            title="Bug Fix", description="Fix the bug", status=TaskStatus.BACKLOG
+        )
         task2 = Task(
-            title="Feature", description="Add new feature", status=Status.BACKLOG
+            title="Feature", description="Add new feature", status=TaskStatus.BACKLOG
         )
 
         store.save(task1)
@@ -360,8 +365,8 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create tasks with different claim status
-        task1 = Task(title="Task 1", status=Status.BACKLOG)
-        task2 = Task(title="Task 2", status=Status.BACKLOG)
+        task1 = Task(title="Task 1", status=TaskStatus.BACKLOG)
+        task2 = Task(title="Task 2", status=TaskStatus.BACKLOG)
         task2.claim("user1")
 
         store.save(task1)
@@ -378,8 +383,8 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create tasks with different claim status
-        task1 = Task(title="Task 1", status=Status.BACKLOG)
-        task2 = Task(title="Task 2", status=Status.BACKLOG)
+        task1 = Task(title="Task 1", status=TaskStatus.BACKLOG)
+        task2 = Task(title="Task 2", status=TaskStatus.BACKLOG)
         task2.claim("user1")
 
         store.save(task1)
@@ -396,8 +401,12 @@ class TestTaskStore:
         store = TaskStore(project_root=temp_dir)
 
         # Create tasks with different urgencies
-        task1 = Task(title="Task 1", priority=Priority.LOW, status=Status.BACKLOG)
-        task2 = Task(title="Task 2", priority=Priority.HIGH, status=Status.BACKLOG)
+        task1 = Task(
+            title="Task 1", priority=TaskPriority.LOW, status=TaskStatus.BACKLOG
+        )
+        task2 = Task(
+            title="Task 2", priority=TaskPriority.HIGH, status=TaskStatus.BACKLOG
+        )
 
         store.save(task1)
         store.save(task2)
@@ -407,7 +416,7 @@ class TestTaskStore:
         tasks = store.list_filtered(filter_obj)
         assert len(tasks) == 2
         # High priority should come first
-        assert tasks[0].priority == Priority.HIGH
+        assert tasks[0].priority == TaskPriority.HIGH
 
     def test_list_filtered_limit(self, temp_dir: Path) -> None:
         """Test listing tasks with limit."""
@@ -415,7 +424,7 @@ class TestTaskStore:
 
         # Create multiple tasks
         for i in range(5):
-            task = Task(title=f"Task {i}", status=Status.BACKLOG)
+            task = Task(title=f"Task {i}", status=TaskStatus.BACKLOG)
             store.save(task)
 
         # Apply limit

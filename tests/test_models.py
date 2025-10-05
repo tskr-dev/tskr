@@ -3,18 +3,13 @@
 from datetime import datetime, timedelta
 
 from tskr.models import (
-    AppConfig,
-    Comment,
-    DashboardStats,
     Event,
-    FileReference,
-    Priority,
     Project,
-    ProjectStats,
     ProjectStatus,
-    Status,
     Task,
     TaskFilter,
+    TaskPriority,
+    TaskStatus,
 )
 
 
@@ -23,11 +18,11 @@ class TestStatus:
 
     def test_status_values(self) -> None:
         """Test status enum values."""
-        assert Status.BACKLOG == "backlog"
-        assert Status.PENDING == "pending"
-        assert Status.COMPLETED == "completed"
-        assert Status.ARCHIVED == "archived"
-        assert Status.DELETED == "deleted"
+        assert TaskStatus.BACKLOG == "backlog"
+        assert TaskStatus.PENDING == "pending"
+        assert TaskStatus.COMPLETED == "completed"
+        assert TaskStatus.ARCHIVED == "archived"
+        assert TaskStatus.DELETED == "deleted"
 
 
 class TestPriority:
@@ -35,24 +30,24 @@ class TestPriority:
 
     def test_priority_values(self) -> None:
         """Test priority enum values."""
-        assert Priority.HIGH == "H"
-        assert Priority.MEDIUM == "M"
-        assert Priority.LOW == "L"
-        assert Priority.NONE == ""
+        assert TaskPriority.HIGH == "H"
+        assert TaskPriority.MEDIUM == "M"
+        assert TaskPriority.LOW == "L"
+        assert TaskPriority.NONE == ""
 
     def test_priority_emoji(self) -> None:
         """Test priority emoji property."""
-        assert Priority.HIGH.emoji == "🔴"
-        assert Priority.MEDIUM.emoji == "🟡"
-        assert Priority.LOW.emoji == "🟢"
-        assert Priority.NONE.emoji == "⚪"
+        assert TaskPriority.HIGH.emoji == "🔴"
+        assert TaskPriority.MEDIUM.emoji == "🟡"
+        assert TaskPriority.LOW.emoji == "🟢"
+        assert TaskPriority.NONE.emoji == "⚪"
 
     def test_priority_sort_order(self) -> None:
         """Test priority sort order."""
-        assert Priority.HIGH.sort_order == 1
-        assert Priority.MEDIUM.sort_order == 2
-        assert Priority.LOW.sort_order == 3
-        assert Priority.NONE.sort_order == 4
+        assert TaskPriority.HIGH.sort_order == 1
+        assert TaskPriority.MEDIUM.sort_order == 2
+        assert TaskPriority.LOW.sort_order == 3
+        assert TaskPriority.NONE.sort_order == 4
 
 
 class TestProjectStatus:
@@ -63,40 +58,6 @@ class TestProjectStatus:
         assert ProjectStatus.ACTIVE == "active"
         assert ProjectStatus.COMPLETED == "completed"
         assert ProjectStatus.ARCHIVED == "archived"
-
-
-class TestComment:
-    """Test Comment model."""
-
-    def test_comment_creation(self) -> None:
-        """Test comment creation."""
-        comment = Comment(author="test_user", content="Test comment")
-        assert comment.author == "test_user"
-        assert comment.content == "Test comment"
-        assert isinstance(comment.timestamp, datetime)
-
-    def test_comment_timestamp_default(self) -> None:
-        """Test comment timestamp defaults to now."""
-        before = datetime.now()
-        comment = Comment(author="test", content="test")
-        after = datetime.now()
-        assert before <= comment.timestamp <= after
-
-
-class TestFileReference:
-    """Test FileReference model."""
-
-    def test_file_reference_creation(self) -> None:
-        """Test file reference creation."""
-        ref = FileReference(path="/path/to/file.py", description="Test file")
-        assert ref.path == "/path/to/file.py"
-        assert ref.description == "Test file"
-
-    def test_file_reference_optional_description(self) -> None:
-        """Test file reference without description."""
-        ref = FileReference(path="/path/to/file.py")
-        assert ref.path == "/path/to/file.py"
-        assert ref.description is None
 
 
 class TestProject:
@@ -141,8 +102,8 @@ class TestTask:
         task = Task(title="Test Task", description="A test task")
         assert task.title == "Test Task"
         assert task.description == "A test task"
-        assert task.status == Status.BACKLOG
-        assert task.priority == Priority.NONE
+        assert task.status == TaskStatus.BACKLOG
+        assert task.priority == TaskPriority.NONE
         assert isinstance(task.id, str)
         assert len(task.id) == 36  # UUID length
 
@@ -150,12 +111,10 @@ class TestTask:
         """Test task default values."""
         task = Task(title="Test")
         assert task.description == ""
-        assert task.status == Status.BACKLOG
-        assert task.priority == Priority.NONE
+        assert task.status == TaskStatus.BACKLOG
+        assert task.priority == TaskPriority.NONE
         assert task.tags == []
         assert task.depends_on == []
-        assert task.discussion == []
-        assert task.code_refs == []
         assert task.acceptance_criteria == []
         assert task.metadata == {}
         assert task.annotations == []
@@ -184,7 +143,7 @@ class TestTask:
         assert task.is_overdue
 
         # Completed task is not overdue
-        task.status = Status.COMPLETED
+        task.status = TaskStatus.COMPLETED
         assert not task.is_overdue
 
     def test_task_is_claimed(self) -> None:
@@ -202,7 +161,7 @@ class TestTask:
         task.mark_complete()
         after = datetime.now()
 
-        assert task.status == Status.COMPLETED
+        assert task.status == TaskStatus.COMPLETED
         assert task.completed_at is not None
         assert before <= task.completed_at <= after
         assert task.modified_at >= before
@@ -217,7 +176,7 @@ class TestTask:
         assert task.claimed_by == "user1"
         assert task.claimed_at is not None
         assert before <= task.claimed_at <= after
-        assert task.status == Status.PENDING
+        assert task.status == TaskStatus.PENDING
         assert task.modified_at >= before
 
     def test_task_unclaim(self) -> None:
@@ -228,34 +187,7 @@ class TestTask:
 
         assert task.claimed_by is None
         assert task.claimed_at is None
-        assert task.status == Status.BACKLOG
-
-    def test_task_add_comment(self) -> None:
-        """Test adding a comment."""
-        task = Task(title="Test")
-        before = datetime.now()
-        task.add_comment("user1", "Test comment")
-        after = datetime.now()
-
-        assert len(task.discussion) == 1
-        comment = task.discussion[0]
-        assert comment.author == "user1"
-        assert comment.content == "Test comment"
-        assert before <= comment.timestamp <= after
-        assert task.modified_at >= before
-
-    def test_task_add_code_ref(self) -> None:
-        """Test adding a code reference."""
-        task = Task(title="Test")
-        before = datetime.now()
-        task.add_code_ref("/path/to/file.py", "Test file")
-        _ = datetime.now()
-
-        assert len(task.code_refs) == 1
-        ref = task.code_refs[0]
-        assert ref.path == "/path/to/file.py"
-        assert ref.description == "Test file"
-        assert task.modified_at >= before
+        assert task.status == TaskStatus.BACKLOG
 
     def test_task_add_annotation(self) -> None:
         """Test adding an annotation."""
@@ -273,10 +205,10 @@ class TestTask:
         """Test updating task fields."""
         task = Task(title="Test")
         before = datetime.now()
-        task.update(description="Updated description", priority=Priority.HIGH)
+        task.update(description="Updated description", priority=TaskPriority.HIGH)
 
         assert task.description == "Updated description"
-        assert task.priority == Priority.HIGH
+        assert task.priority == TaskPriority.HIGH
         assert task.modified_at >= before
 
     def test_task_calculate_urgency(self) -> None:
@@ -286,15 +218,15 @@ class TestTask:
         assert urgency == 1.0  # Base urgency
 
         # Test priority contribution
-        task.priority = Priority.HIGH
+        task.priority = TaskPriority.HIGH
         urgency = task.calculate_urgency()
         assert urgency == 7.0  # 1.0 + 6.0
 
-        task.priority = Priority.MEDIUM
+        task.priority = TaskPriority.MEDIUM
         urgency = task.calculate_urgency()
         assert urgency == 4.0  # 1.0 + 3.0
 
-        task.priority = Priority.LOW
+        task.priority = TaskPriority.LOW
         urgency = task.calculate_urgency()
         assert urgency == 2.0  # 1.0 + 1.0
 
@@ -335,9 +267,9 @@ class TestTaskFilter:
 
     def test_task_filter_creation(self) -> None:
         """Test task filter creation."""
-        filter_obj = TaskFilter(status=Status.PENDING, priority=Priority.HIGH)
-        assert filter_obj.status == Status.PENDING
-        assert filter_obj.priority == Priority.HIGH
+        filter_obj = TaskFilter(status=TaskStatus.PENDING, priority=TaskPriority.HIGH)
+        assert filter_obj.status == TaskStatus.PENDING
+        assert filter_obj.priority == TaskPriority.HIGH
         assert filter_obj.tags == []
         assert filter_obj.limit is None
         assert filter_obj.sort_by == "urgency"
@@ -385,66 +317,3 @@ class TestEvent:
         assert "test-task" in log_line
         assert "user1" in log_line
         assert "key" in log_line
-
-
-class TestProjectStats:
-    """Test ProjectStats model."""
-
-    def test_project_stats_creation(self) -> None:
-        """Test project stats creation."""
-        stats = ProjectStats(
-            name="Test Project",
-            backlog_count=5,
-            pending_count=3,
-            completed_count=10,
-            total_count=18,
-        )
-        assert stats.name == "Test Project"
-        assert stats.backlog_count == 5
-        assert stats.pending_count == 3
-        assert stats.completed_count == 10
-        assert stats.total_count == 18
-
-    def test_completion_rate(self) -> None:
-        """Test completion rate calculation."""
-        stats = ProjectStats(total_count=10, completed_count=5)
-        assert stats.completion_rate == 50.0
-
-        stats = ProjectStats(total_count=0, completed_count=0)
-        assert stats.completion_rate == 0.0
-
-        stats = ProjectStats(total_count=10, completed_count=10)
-        assert stats.completion_rate == 100.0
-
-
-class TestDashboardStats:
-    """Test DashboardStats model."""
-
-    def test_dashboard_stats_creation(self) -> None:
-        """Test dashboard stats creation."""
-        stats = DashboardStats(total_backlog=10, total_pending=5, total_completed=20)
-        assert stats.total_backlog == 10
-        assert stats.total_pending == 5
-        assert stats.total_completed == 20
-        assert stats.hot_tasks == []
-
-
-class TestAppConfig:
-    """Test AppConfig model."""
-
-    def test_app_config_creation(self) -> None:
-        """Test app config creation."""
-        config = AppConfig()
-        assert config.default_author == "unknown"
-        assert config.current_project is None
-        assert "bug" in config.auto_tags
-        assert "feature" in config.auto_tags
-        assert config.max_description_length == 50
-        assert config.default_list_limit == 20
-
-    def test_app_config_display_settings(self) -> None:
-        """Test app config display settings."""
-        config = AppConfig()
-        assert config.display_settings["show_tags_in_list"] is True
-        assert config.display_settings["show_due_in_list"] is True
-        assert config.display_settings["truncate_description"] is True

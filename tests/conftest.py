@@ -6,9 +6,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from typer.testing import CliRunner
+
 from tskr.models import Project
 from tskr.services import ProjectService
-from typer.testing import CliRunner
 
 
 @pytest.fixture
