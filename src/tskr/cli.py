@@ -1,15 +1,13 @@
 """Main CLI application for Tskr."""
 
+from typing import Optional
+
 import typer
 from rich.console import Console
 
-from .commands import (
-    add_command,
-    delete_command,
-    edit_command,
-    init_command,
-    ls_command,
-)
+from . import __app_name__, __version__
+from .commands import (add_command, delete_command, edit_command, init_command,
+                       ls_command)
 
 # Initialize Typer app
 app = typer.Typer(
@@ -20,8 +18,26 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Initialize console
 console = Console()
+
+
+def version_callback(value: bool) -> None:
+    """Print version information and exit."""
+    if value:
+        console.print(f"[bold cyan]{__app_name__}[/bold cyan] [green]v{__version__}[/green]")
+        console.print("[dim]A clean, developer-friendly task management CLI[/dim]")
+        raise typer.Exit()
+
+
+# Add version option
+@app.callback()
+def main(
+    version: Optional[bool] = typer.Option(
+        None, "--version", "-v", callback=version_callback, is_eager=True, help="Show version information"
+    )
+) -> None:
+    """A git-friendly task manager for LLM collaboration."""
+    pass
 
 
 # Register commands
