@@ -225,41 +225,6 @@ class TaskService:
 
         return saved_task
 
-    def add_comment(self, task_id: str, author: str, content: str) -> Optional[Task]:
-        """Add a comment to a task."""
-        task = self.store.get(task_id)
-        if not task:
-            return None
-
-        task.add_comment(author, content)
-        saved_task = self.store.save(task)
-
-        # Log event
-        event = Event(
-            event_type="task_commented",
-            task_id=saved_task.id,
-            actor=author,
-            details={"comment": content[:100]},
-        )
-        self.event_log.append(event)
-
-        return saved_task
-
-    def add_code_ref(
-        self,
-        task_id: str,
-        path: str,
-        description: Optional[str] = None,
-        actor: str = "unknown",
-    ) -> Optional[Task]:
-        """Add a code reference to a task."""
-        task = self.store.get(task_id)
-        if not task:
-            return None
-
-        task.add_code_ref(path, description)
-        return self.store.save(task)
-
     def get_recent_events(self, limit: int = 10) -> list[Event]:
         """Get recent events from the event log."""
         return self.event_log.read_all(limit=limit)
