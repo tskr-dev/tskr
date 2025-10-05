@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from .models import Priority, Status, Task, TaskFilter
+from .models import Task, TaskFilter, TaskPriority, TaskStatus
 
 
 class TaskRepository:
@@ -47,11 +47,13 @@ class TaskRepository:
 
                 # Parse enums
                 if "status" in task_data:
-                    task_data["status"] = Status(task_data["status"])
+                    task_data["status"] = TaskStatus(task_data["status"])
                 if "priority" in task_data:
                     priority_val = task_data["priority"]
                     task_data["priority"] = (
-                        Priority(priority_val) if priority_val else Priority.NONE
+                        TaskPriority(priority_val)
+                        if priority_val
+                        else TaskPriority.NONE
                     )
 
                 task = Task(**task_data)
@@ -220,7 +222,7 @@ class TaskRepository:
         """Get list of all unique projects."""
         tasks = self.get_all()
         projects = {
-            t.project for t in tasks if t.project and t.status != Status.DELETED
+            t.project for t in tasks if t.project and t.status != TaskStatus.DELETED
         }
         return sorted(projects)
 
@@ -229,7 +231,7 @@ class TaskRepository:
         tasks = self.get_all()
         tags = set()
         for task in tasks:
-            if task.status != Status.DELETED:
+            if task.status != TaskStatus.DELETED:
                 tags.update(task.tags)
         return sorted(tags)
 
@@ -266,11 +268,13 @@ class TaskRepository:
 
                 # Parse enums
                 if "status" in task_data:
-                    task_data["status"] = Status(task_data["status"])
+                    task_data["status"] = TaskStatus(task_data["status"])
                 if "priority" in task_data:
                     priority_val = task_data["priority"]
                     task_data["priority"] = (
-                        Priority(priority_val) if priority_val else Priority.NONE
+                        TaskPriority(priority_val)
+                        if priority_val
+                        else TaskPriority.NONE
                     )
 
                 task = Task(**task_data)
@@ -306,7 +310,7 @@ class TaskRepository:
         tasks = [
             t
             for t in tasks
-            if not (t.status == Status.DELETED and t.modified_at < cutoff_date)
+            if not (t.status == TaskStatus.DELETED and t.modified_at < cutoff_date)
         ]
 
         removed_count = initial_count - len(tasks)

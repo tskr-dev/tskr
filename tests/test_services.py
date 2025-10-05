@@ -1,20 +1,11 @@
 """Tests for business logic services."""
 
-from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from tskr.models import (
-    DashboardStats,
-    Event,
-    Priority,
-    Project,
-    ProjectStats,
-    Status,
-    Task,
-    TaskFilter,
-)
+
+from tskr.models import Event, Project, Task, TaskFilter, TaskPriority, TaskStatus
 from tskr.services import ProjectService, TaskService
 
 
@@ -34,7 +25,7 @@ class TestTaskService:
     def test_init_without_project_root(self) -> None:
         """Test TaskService initialization without project root."""
         with (
-            patch("tskr.services.ProjectContext.find_project_root", return_value=None),
+            patch("tskr.context.ProjectContext.find_project_root", return_value=None),
             pytest.raises(RuntimeError, match="Not in a project"),
         ):
             TaskService()
@@ -52,7 +43,7 @@ class TestTaskService:
             task = service.create_task(
                 title="Test Task",
                 description="Test description",
-                priority=Priority.HIGH,
+                priority=TaskPriority.HIGH,
                 actor="test_user",
             )
 
@@ -97,7 +88,7 @@ class TestTaskService:
             mock_tasks = [Task(title="Task 1"), Task(title="Task 2")]
             mock_list.return_value = mock_tasks
 
-            filter_obj = TaskFilter(status=Status.PENDING)
+            filter_obj = TaskFilter(status=TaskStatus.PENDING)
             result = service.list_tasks(filter_obj)
 
             assert result == mock_tasks
@@ -133,7 +124,7 @@ class TestTaskService:
 
             assert result == mock_task
             assert mock_task.claimed_by == "user1"
-            assert mock_task.status == Status.PENDING
+            assert mock_task.status == TaskStatus.PENDING
             mock_save.assert_called_once()
             mock_append.assert_called_once()
 
@@ -176,7 +167,7 @@ class TestTaskService:
 
             assert result == mock_task
             assert mock_task.claimed_by is None
-            assert mock_task.status == Status.BACKLOG
+            assert mock_task.status == TaskStatus.BACKLOG
             mock_save.assert_called_once()
             mock_append.assert_called_once()
 
@@ -207,7 +198,7 @@ class TestTaskService:
             result = service.complete_task("test-id", "user1")
 
             assert result == mock_task
-            assert mock_task.status == Status.COMPLETED
+            assert mock_task.status == TaskStatus.COMPLETED
             assert mock_task.completed_at is not None
             mock_save.assert_called_once()
             mock_append.assert_called_once()
@@ -218,7 +209,7 @@ class TestTaskService:
 
         with patch.object(service.store, "get") as mock_get:
             mock_task = Task(title="Test Task")
-            mock_task.status = Status.COMPLETED
+            mock_task.status = TaskStatus.COMPLETED
             mock_get.return_value = mock_task
 
             result = service.complete_task("test-id", "user1")
@@ -267,12 +258,15 @@ class TestTaskService:
             mock_save.return_value = mock_task
 
             result = service.modify_task(
-                "test-id", title="Updated Task", priority=Priority.HIGH, actor="user1"
+                "test-id",
+                title="Updated Task",
+                priority=TaskPriority.HIGH,
+                actor="user1",
             )
 
             assert result == mock_task
             assert mock_task.title == "Updated Task"
-            assert mock_task.priority == Priority.HIGH
+            assert mock_task.priority == TaskPriority.HIGH
             mock_save.assert_called_once()
             mock_append.assert_called_once()
 
@@ -296,99 +290,6 @@ class TestTaskService:
             assert "tag2" in mock_task.tags
             assert "tag3" in mock_task.tags
             assert "tag1" not in mock_task.tags
-
-    def test_add_comment_success(self, temp_dir: Path) -> None:
-        """Test successfully adding a comment."""
-        service = TaskService(project_root=temp_dir)
-
-        with (
-            patch.object(service.store, "get") as mock_get,
-            patch.object(service.store, "save") as mock_save,
-            patch.object(service.event_log, "append") as mock_append,
-        ):
-            mock_task = Task(title="Test Task")
-            mock_get.return_value = mock_task
-            mock_save.return_value = mock_task
-
-            result = service.add_comment("test-id", "user1", "Test comment")
-
-            assert result == mock_task
-            assert len(mock_task.discussion) == 1
-            assert mock_task.discussion[0].author == "user1"
-            assert mock_task.discussion[0].content == "Test comment"
-            mock_save.assert_called_once()
-            mock_append.assert_called_once()
-
-    def test_add_code_ref_success(self, temp_dir: Path) -> None:
-        """Test successfully adding a code reference."""
-        service = TaskService(project_root=temp_dir)
-
-        with (
-            patch.object(service.store, "get") as mock_get,
-            patch.object(service.store, "save") as mock_save,
-        ):
-            mock_task = Task(title="Test Task")
-            mock_get.return_value = mock_task
-            mock_save.return_value = mock_task
-
-            result = service.add_code_ref("test-id", "/path/to/file.py", "Test file")
-
-            assert result == mock_task
-            assert len(mock_task.code_refs) == 1
-            assert mock_task.code_refs[0].path == "/path/to/file.py"
-            assert mock_task.code_refs[0].description == "Test file"
-            mock_save.assert_called_once()
-
-    def test_get_dashboard_stats(self, temp_dir: Path) -> None:
-        """Test getting dashboard statistics."""
-        service = TaskService(project_root=temp_dir)
-
-        # Create mock tasks
-        backlog_task = Task(title="Backlog Task", status=Status.BACKLOG)
-        pending_task = Task(title="Pending Task", status=Status.PENDING)
-        completed_task = Task(title="Completed Task", status=Status.COMPLETED)
-        overdue_task = Task(
-            title="Overdue Task",
-            status=Status.BACKLOG,
-            due=datetime.now() - timedelta(days=1),
-        )
-
-        with patch.object(service.store, "list_all") as mock_list:
-            mock_list.return_value = [
-                backlog_task,
-                pending_task,
-                completed_task,
-                overdue_task,
-            ]
-
-            stats = service.get_dashboard_stats()
-
-            assert isinstance(stats, DashboardStats)
-            # Note: backlog includes both backlog_task and overdue_task
-            assert stats.total_backlog == 2  # backlog_task + overdue_task
-            assert stats.total_pending == 1
-            assert stats.total_completed == 1
-            assert stats.total_overdue == 1
-
-    def test_get_project_stats(self, temp_dir: Path) -> None:
-        """Test getting project statistics."""
-        service = TaskService(project_root=temp_dir)
-
-        # Create mock tasks
-        backlog_task = Task(title="Backlog Task", status=Status.BACKLOG)
-        pending_task = Task(title="Pending Task", status=Status.PENDING)
-        completed_task = Task(title="Completed Task", status=Status.COMPLETED)
-
-        with patch.object(service.store, "list_all") as mock_list:
-            mock_list.return_value = [backlog_task, pending_task, completed_task]
-
-            stats = service.get_project_stats()
-
-            assert isinstance(stats, ProjectStats)
-            assert stats.backlog_count == 1
-            assert stats.pending_count == 1
-            assert stats.completed_count == 1
-            assert stats.total_count == 3
 
     def test_get_recent_events(self, temp_dir: Path) -> None:
         """Test getting recent events."""
@@ -423,8 +324,8 @@ class TestProjectService:
     def test_create_project_basic(self, temp_dir: Path) -> None:
         """Test creating a basic project."""
         with (
-            patch("tskr.services.ProjectContext.save_project") as mock_save,
-            patch("tskr.services.EventLog"),
+            patch("tskr.context.ProjectContext.save_project") as mock_save,
+            patch("tskr.storage.EventLog"),
         ):
             project = ProjectService.create_project(
                 project_root=temp_dir, name="Test Project", description="A test project"
@@ -438,8 +339,8 @@ class TestProjectService:
     def test_create_project_with_custom_id(self, temp_dir: Path) -> None:
         """Test creating a project with custom ID."""
         with (
-            patch("tskr.services.ProjectContext.save_project") as mock_save,
-            patch("tskr.services.EventLog"),
+            patch("tskr.context.ProjectContext.save_project") as mock_save,
+            patch("tskr.storage.EventLog"),
         ):
             project = ProjectService.create_project(
                 project_root=temp_dir,
@@ -454,8 +355,8 @@ class TestProjectService:
     def test_create_project_creates_directories(self, temp_dir: Path) -> None:
         """Test that project creation creates necessary directories."""
         with (
-            patch("tskr.services.ProjectContext.save_project"),
-            patch("tskr.services.EventLog"),
+            patch("tskr.context.ProjectContext.save_project"),
+            patch("tskr.storage.EventLog"),
         ):
             ProjectService.create_project(project_root=temp_dir, name="Test Project")
 
@@ -472,8 +373,8 @@ class TestProjectService:
     def test_create_project_creates_readme(self, temp_dir: Path) -> None:
         """Test that project creation creates README template."""
         with (
-            patch("tskr.services.ProjectContext.save_project"),
-            patch("tskr.services.EventLog"),
+            patch("tskr.context.ProjectContext.save_project"),
+            patch("tskr.storage.EventLog"),
         ):
             ProjectService.create_project(
                 project_root=temp_dir, name="Test Project", description="A test project"
@@ -493,8 +394,8 @@ class TestProjectService:
         gitignore_path.write_text("existing content\n")
 
         with (
-            patch("tskr.services.ProjectContext.save_project"),
-            patch("tskr.services.EventLog"),
+            patch("tskr.context.ProjectContext.save_project"),
+            patch("tskr.storage.EventLog"),
         ):
             ProjectService.create_project(project_root=temp_dir, name="Test Project")
 
@@ -506,8 +407,8 @@ class TestProjectService:
     def test_create_project_creates_gitignore(self, temp_dir: Path) -> None:
         """Test that project creation creates .gitignore if it doesn't exist."""
         with (
-            patch("tskr.services.ProjectContext.save_project"),
-            patch("tskr.services.EventLog"),
+            patch("tskr.context.ProjectContext.save_project"),
+            patch("tskr.storage.EventLog"),
         ):
             ProjectService.create_project(project_root=temp_dir, name="Test Project")
 

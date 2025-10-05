@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from .context import ProjectContext
-from .models import Event, Priority, Status, Task, TaskFilter
+from .models import Event, Task, TaskFilter, TaskPriority, TaskStatus
 
 
 class TaskStore:
@@ -46,22 +46,22 @@ class TaskStore:
         ]:
             dir_path.mkdir(parents=True, exist_ok=True)
 
-    def _get_status_dir(self, status: Status) -> Path:
+    def _get_status_dir(self, status: TaskStatus) -> Path:
         """Get directory path for a given status."""
         mapping = {
-            Status.BACKLOG: self.backlog_dir,
-            Status.PENDING: self.pending_dir,
-            Status.COMPLETED: self.completed_dir,
-            Status.ARCHIVED: self.archived_dir,
+            TaskStatus.BACKLOG: self.backlog_dir,
+            TaskStatus.PENDING: self.pending_dir,
+            TaskStatus.COMPLETED: self.completed_dir,
+            TaskStatus.ARCHIVED: self.archived_dir,
         }
         return mapping[status]
 
-    def _get_task_path(self, task_id: str, status: Status) -> Path:
+    def _get_task_path(self, task_id: str, status: TaskStatus) -> Path:
         """Get file path for a task."""
         status_dir = self._get_status_dir(status)
         return status_dir / f"{task_id}.json"
 
-    def _find_task_file(self, task_id: str) -> Optional[tuple[Path, Status]]:
+    def _find_task_file(self, task_id: str) -> Optional[tuple[Path, TaskStatus]]:
         """
         Find a task file by ID (supports short IDs).
 
@@ -69,10 +69,10 @@ class TaskStore:
             Tuple of (file_path, status) or None if not found
         """
         for status in [
-            Status.BACKLOG,
-            Status.PENDING,
-            Status.COMPLETED,
-            Status.ARCHIVED,
+            TaskStatus.BACKLOG,
+            TaskStatus.PENDING,
+            TaskStatus.COMPLETED,
+            TaskStatus.ARCHIVED,
         ]:
             status_dir = self._get_status_dir(status)
 
@@ -111,11 +111,11 @@ class TaskStore:
 
             # Parse enums
             if "status" in data:
-                data["status"] = Status(data["status"])
+                data["status"] = TaskStatus(data["status"])
             if "priority" in data:
                 priority_val = data["priority"]
                 data["priority"] = (
-                    Priority(priority_val) if priority_val else Priority.NONE
+                    TaskPriority(priority_val) if priority_val else TaskPriority.NONE
                 )
 
             task = Task(**data)
@@ -212,7 +212,7 @@ class TaskStore:
             # Move to archived
             task = self._load_task_from_file(file_path)
             if task:
-                task.status = Status.ARCHIVED
+                task.status = TaskStatus.ARCHIVED
                 task.modified_at = datetime.now()
                 self.save(task)
                 if file_path.exists():
@@ -220,7 +220,7 @@ class TaskStore:
 
         return True
 
-    def list_all(self, status: Optional[Status] = None) -> list[Task]:
+    def list_all(self, status: Optional[TaskStatus] = None) -> list[Task]:
         """
         List all tasks, optionally filtered by status.
 

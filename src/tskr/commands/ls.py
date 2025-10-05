@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 
 from ..formatters import get_formatter
-from ..models import Priority, Status, TaskFilter
+from ..models import TaskFilter, TaskPriority, TaskStatus
 from ..services import TaskService
 
 
@@ -49,10 +49,10 @@ def ls_command(
     status = None
     if status_filter:
         status_map = {
-            "backlog": Status.BACKLOG,
-            "pending": Status.PENDING,
-            "completed": Status.COMPLETED,
-            "archived": Status.ARCHIVED,
+            "backlog": TaskStatus.BACKLOG,
+            "pending": TaskStatus.PENDING,
+            "completed": TaskStatus.COMPLETED,
+            "archived": TaskStatus.ARCHIVED,
         }
         status = status_map.get(status_filter.lower())
         if status is None:
@@ -63,7 +63,7 @@ def ls_command(
             raise typer.Exit(1) from None
     elif not all_tasks:
         # Default to backlog
-        status = Status.BACKLOG
+        status = TaskStatus.BACKLOG
 
     # Parse priority
     priority = None
@@ -72,7 +72,7 @@ def ls_command(
         if priority_upper not in ["H", "M", "L"]:
             formatter.print_error("Priority must be H, M, or L")
             raise typer.Exit(1) from None
-        priority = Priority(priority_upper)
+        priority = TaskPriority(priority_upper)
 
     # Build filter
     task_filter = TaskFilter(
@@ -108,7 +108,9 @@ def ls_command(
         parts = []
 
         # ID and priority
-        priority_str = task.priority_emoji if task.priority != Priority.NONE else "  "
+        priority_str = (
+            task.priority_emoji if task.priority != TaskPriority.NONE else "  "
+        )
         parts.append(f"{priority_str} [{task.short_id}]")
 
         # Title
@@ -137,5 +139,5 @@ def ls_command(
         console.print("  " + " ".join(parts))
 
     console.print()
-    if not unclaimed and not claimed and status in [Status.BACKLOG, None]:
+    if not unclaimed and not claimed and status in [TaskStatus.BACKLOG, None]:
         console.print("💡 Use 'tskr ls --unclaimed' to see available tasks to claim")

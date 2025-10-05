@@ -37,7 +37,7 @@ def version_callback(value: bool) -> None:
 
 
 # Add version option
-@app.callback()
+@app.callback()  # type: ignore[misc]
 def main(
     version: Optional[bool] = typer.Option(
         None,
@@ -114,20 +114,21 @@ def show_command(task_id: str) -> None:
         for i, criterion in enumerate(task.acceptance_criteria, 1):
             console.print(f"  {i}. {criterion}")
 
-    if task.code_refs:
-        console.print()
-        console.print("[bold]Code References:[/bold]")
-        for ref in task.code_refs:
-            desc = f" - {ref.description}" if ref.description else ""
-            console.print(f"  📄 {ref.path}{desc}")
+    # Code references and discussion features not yet implemented
+    # if task.code_refs:
+    #     console.print()
+    #     console.print("[bold]Code References:[/bold]")
+    #     for ref in task.code_refs:
+    #         desc = f" - {ref.description}" if ref.description else ""
+    #         console.print(f"  📄 {ref.path}{desc}")
 
-    if task.discussion:
-        console.print()
-        console.print("[bold]Discussion:[/bold]")
-        for comment in task.discussion:
-            time_str = comment.timestamp.strftime("%Y-%m-%d %H:%M")
-            console.print(f"  [cyan]{comment.author}[/cyan] ({time_str}):")
-            console.print(f"    {comment.content}")
+    # if task.discussion:
+    #     console.print()
+    #     console.print("[bold]Discussion:[/bold]")
+    #     for comment in task.discussion:
+    #         time_str = comment.timestamp.strftime("%Y-%m-%d %H:%M")
+    #         console.print(f"  [cyan]{comment.author}[/cyan] ({time_str}):")
+    #         console.print(f"    {comment.content}")
 
     console.print()
     console.print(f"Created: {task.created_at.strftime('%Y-%m-%d %H:%M')}")

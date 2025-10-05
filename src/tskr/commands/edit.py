@@ -111,13 +111,13 @@ Due: {task.due.strftime("%Y-%m-%d") if task.due else ""}
                     )
                     if value != current_priority:
                         if value.upper() in ["H", "M", "L"]:
-                            from ..models import Priority
+                            from ..models import TaskPriority
 
-                            updates["priority"] = Priority(value.upper())
+                            updates["priority"] = TaskPriority(value.upper())
                         elif value == "":
-                            from ..models import Priority
+                            from ..models import TaskPriority
 
-                            updates["priority"] = Priority.NONE
+                            updates["priority"] = TaskPriority.NONE
                 elif key == "tags":
                     new_tags = [tag.strip() for tag in value.split(",") if tag.strip()]
                     if new_tags != task.tags:

@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
 from tskr.context import ProjectContext
 from tskr.models import Project, ProjectStatus
 

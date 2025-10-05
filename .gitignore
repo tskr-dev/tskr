@@ -73,6 +73,7 @@ Thumbs.db
 # Tskr test data
 test-project/
 .tskr-test/
+.tskr
 
 # Development
 .mypy_cache/

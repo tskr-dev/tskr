@@ -8,7 +8,7 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.text import Text
 
-from .models import DashboardStats, ProjectStats, Task
+from .models import Task
 from .utils import format_relative_time, get_urgency_color, truncate_text
 
 
@@ -121,93 +121,6 @@ class TaskFormatter:
             summary_parts.append(f"{high_priority} high priority")
 
         return "📊 " + " • ".join(summary_parts)
-
-    def format_dashboard(self, stats: DashboardStats) -> Panel:
-        """Format dashboard statistics."""
-        content = []
-
-        # Overview stats as text
-        content.append(Text("📊 Overview", style="bold blue"))
-        content.append(Text(""))
-        content.append(
-            Text(
-                f"Today: {stats.due_today}  •  "
-                f"This Week: {stats.due_this_week}  •  "
-                f"Overdue: {stats.total_overdue}"
-            )
-        )
-        content.append(
-            Text(
-                f"Projects: {stats.active_projects}  •  "
-                f"Completed Today: {stats.total_completed_today}  •  "
-                f"Total Pending: {stats.total_pending}"
-            )
-        )
-
-        # Hot tasks
-        if stats.hot_tasks:
-            content.append(Text(""))
-            content.append(Text("🔥 Hot Tasks (need attention)", style="bold red"))
-
-            for task in stats.hot_tasks[:3]:  # Show top 3
-                desc = truncate_text(task.description, 40)
-                project_str = f" #{task.project}" if task.project else ""
-                tags_str = (
-                    " " + " ".join(f"#{tag}" for tag in task.tags[:2])
-                    if task.tags
-                    else ""
-                )
-
-                if task.is_overdue:
-                    status = (
-                        f"(overdue {format_relative_time(task.due)})"
-                        if task.due
-                        else "(overdue)"
-                    )
-                elif task.due:
-                    status = f"(due {format_relative_time(task.due)})"
-                else:
-                    status = "(high priority)"
-
-                hot_task_text = f"  • {desc} {status}{project_str}{tags_str}"
-                content.append(Text(hot_task_text, style="yellow"))
-
-        # Quick actions
-        content.append(Text(""))
-        content.append(Text("⚡ Quick Actions", style="bold green"))
-        content.append(Text("  task list --today          # show today's tasks"))
-        content.append(Text('  task add "..." -p project  # add task to project'))
-        content.append(Text("  task done <id>             # complete task"))
-        content.append(Text("  task status                # refresh dashboard"))
-
-        return Panel(
-            "\n".join(str(item) for item in content),
-            title="📊 Developer Dashboard",
-            border_style="blue",
-        )
-
-    def format_project_stats(self, project_stats: list[ProjectStats]) -> Table:
-        """Format project statistics table."""
-        table = Table(title="📁 Projects")
-        table.add_column("Project", style="bold blue")
-        table.add_column("Pending", style="yellow")
-        table.add_column("Completed", style="green")
-        table.add_column("Overdue", style="red")
-        table.add_column("Total", style="white")
-        table.add_column("Progress", style="cyan")
-
-        for stats in project_stats:
-            progress = f"{stats.completion_rate:.1f}%"
-            table.add_row(
-                stats.name,
-                str(stats.pending_count),
-                str(stats.completed_count),
-                str(stats.overdue_count),
-                str(stats.total_count),
-                progress,
-            )
-
-        return table
 
     def format_task_details(self, task: Task) -> Panel:
         """Format detailed task information."""
